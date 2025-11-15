@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: triton-cv-config
+  namespace: triton-inference
+data:
+  MODEL_REPOSITORY: "/models"
+

@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: triton-inference
+data:
+  grafana.ini: |
+    [server]
+    http_port = 3000
+
+    [datasources]
+    [datasources.prometheus]
+    type = prometheus
+    access = proxy
+    url = http://prometheus:9090
+    isDefault = true
+
+    [dashboards]
+    default = {
+      "homeDashboardId": 1,
+      "timepicker": {
+        "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+      }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: triton-inference
+data:
+  triton-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Triton Inference Server Dashboard",
+        "tags": ["triton", "inference", "ml"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "{{method}} {{endpoint}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Inference Latency (p95)",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "p95 latency"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Triton Model Inference Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nv_inference_request_duration_us{model=\"yolo8n\"} / 1000",
+                "legendFormat": "YOLOv8n (ms)"
+              },
+              {
+                "expr": "nv_inference_request_duration_us{model=\"florence2\"} / 1000",
+                "legendFormat": "Florence-2 (ms)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "GPU Utilization",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nv_gpu_utilization",
+                "legendFormat": "GPU {{gpu}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+                "legendFormat": "5xx errors"
+              },
+              {
+                "expr": "rate(http_requests_total{status=~\"4..\"}[5m])",
+                "legendFormat": "4xx errors"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Active Requests",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "nv_inference_request_count",
+                "legendFormat": "{{model}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "refresh": "10s",
+        "schemaVersion": 16,
+        "version": 1
+      }
+    }
+
