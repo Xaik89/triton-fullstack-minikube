@@ -6,7 +6,7 @@ metadata:
   labels:
     app: triton-florence
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: triton-florence
@@ -56,4 +56,3 @@ spec:
       volumes:
       - name: models
         emptyDir: {}
-

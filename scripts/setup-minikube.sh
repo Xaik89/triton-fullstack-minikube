@@ -90,15 +90,19 @@ fi
 
 echo "Starting minikube cluster..."
 
-# Check for NVIDIA GPU and adjust memory accordingly
+# Check for NVIDIA GPU and adjust memory / GPU flags accordingly
 if command -v nvidia-smi &> /dev/null; then
     GPU_MEMORY=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
     echo "NVIDIA GPU detected with ${GPU_MEMORY}MB memory"
     echo "Using 4GB RAM for minikube to leave resources for GPU workloads"
     MEMORY=4096
+    # For Docker driver, tell minikube to pass the host GPU into the kicbase container
+    # so that the nvidia-device-plugin can see `nvidia.com/gpu` on the node.
+    GPU_ARGS="--gpus=all"
 else
     echo "No NVIDIA GPU detected. Using 4GB RAM."
     MEMORY=4096
+    GPU_ARGS=""
 fi
 
 # Start minikube with GPU support
@@ -108,7 +112,8 @@ minikube start \
     --cpus=4 \
     --disk-size=50g \
     --addons=metrics-server \
-    --addons=ingress
+    --addons=ingress \
+    ${GPU_ARGS}
 
 # Enable GPU support (if available)
 if command -v nvidia-smi &> /dev/null; then
@@ -152,4 +157,3 @@ echo ""
 echo "=== Minikube Setup Complete ==="
 echo "To access minikube dashboard: minikube dashboard"
 echo "To access services: minikube service <service-name> -n triton-inference"
-
