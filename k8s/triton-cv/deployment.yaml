@@ -47,10 +47,4 @@ spec:
             port: 8000
           initialDelaySeconds: 60
           periodSeconds: 10
-        volumeMounts:
-        - name: models
-          mountPath: /models
-      volumes:
-      - name: models
-        emptyDir: {}
 
