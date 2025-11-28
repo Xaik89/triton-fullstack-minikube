@@ -5,7 +5,5 @@ metadata:
   namespace: triton-inference
 data:
   TRITON_CV_URL: "triton-cv:8001"
-  TRITON_FLORENCE_URL: "triton-florence:8001"
   CV_MODEL_NAME: "yolo8n"
-  FLORENCE_MODEL_NAME: "florence2"
 

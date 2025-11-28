@@ -17,15 +17,8 @@ class CVDetectionResponse(BaseModel):
     processing_time_ms: float
 
 
-class FlorenceDetectionResponse(BaseModel):
-    detections: List[DetectionBox]
-    processing_time_ms: float
-    raw_output: Optional[Dict[str, Any]] = None
-
-
 class HealthResponse(BaseModel):
     status: str
     backend: str
     triton_cv: str
-    triton_florence: str
 

@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: triton-florence-config
-  namespace: triton-inference
-data:
-  MODEL_REPOSITORY: "/models"
-  FLORENCE_MODEL_NAME: "microsoft/Florence-2-base"
-

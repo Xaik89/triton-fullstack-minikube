@@ -36,10 +36,6 @@
           {
             "expr": "nv_inference_request_duration_us{model=\"yolo8n\"} / 1000",
             "legendFormat": "YOLOv8n (ms)"
-          },
-          {
-            "expr": "nv_inference_request_duration_us{model=\"florence2\"} / 1000",
-            "legendFormat": "Florence-2 (ms)"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}

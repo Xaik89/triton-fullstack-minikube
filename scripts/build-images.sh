@@ -19,16 +19,10 @@ cd ../triton-cv
 docker build -t triton-cv:latest .
 cd ../scripts
 
-# Build Triton Florence image
-echo "Building Triton Florence image..."
-cd ../triton-florence
-docker build -t triton-florence:latest .
-cd ../scripts
-
 echo ""
 echo "=== Images Built Successfully ==="
 echo "Images available in minikube:"
-docker images | grep -E "triton-backend|triton-cv|triton-florence"
+docker images | grep -E "triton-backend|triton-cv"
 
 echo ""
 echo "=== Next Steps ==="

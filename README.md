@@ -2,9 +2,8 @@
 
 This project demonstrates how to set up a complete machine learning inference pipeline using NVIDIA Triton Inference Server on Minikube (local Kubernetes). The system includes:
 
-- **FastAPI Backend**: Routes requests to appropriate Triton instances
+- **FastAPI Backend**: Routes requests to Triton CV instance
 - **Triton CV Instance**: Serves YOLOv8n model (TensorRT optimized)
-- **Triton Florence Instance**: Serves Florence-2 model using vLLM engine
 - **Prometheus**: Collects metrics from all services
 - **Grafana**: Visualizes metrics and provides dashboards
 
@@ -18,25 +17,23 @@ This project demonstrates how to set up a complete machine learning inference pi
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              FastAPI Backend (Port 8000)                    │
-│  ┌──────────────┐              ┌──────────────┐            │
-│  │  /cv/detect  │              │/florence/detect│           │
-│  └──────┬───────┘              └──────┬───────┘            │
-└─────────┼──────────────────────────────┼────────────────────┘
-          │                              │
-          │ gRPC                         │ gRPC
-          ▼                              ▼
-┌──────────────────────┐    ┌──────────────────────────────┐
-│  Triton CV Instance  │    │  Triton Florence Instance    │
-│  (Port 8001)         │    │  (Port 8001)                 │
-│                      │    │                              │
-│  Model: YOLOv8n     │    │  Model: Florence-2           │
-│  Backend: TensorRT   │    │  Backend: Python + vLLM      │
-│  Metrics: 8002      │    │  Metrics: 8002               │
-└──────────┬───────────┘    └──────────────┬───────────────┘
-           │                                │
-           └────────────┬───────────────────┘
-                        │
-                        ▼
+│  ┌──────────────┐                                            │
+│  │  /cv/detect  │                                            │
+│  └──────┬───────┘                                            │
+└─────────┼────────────────────────────────────────────────────┘
+          │
+          │ gRPC
+          ▼
+┌──────────────────────┐
+│  Triton CV Instance  │
+│  (Port 8001)         │
+│                      │
+│  Model: YOLOv8n     │
+│  Backend: TensorRT   │
+│  Metrics: 8002      │
+└──────────┬───────────┘
+           │
+           ▼
            ┌────────────────────────┐
            │    Prometheus          │
            │    (Port 9090)         │
@@ -56,7 +53,7 @@ This project demonstrates how to set up a complete machine learning inference pi
 - **Docker** with GPU support (`nvidia-container-toolkit`)
 - **Minikube**
 - **kubectl**
-- **NVIDIA GPU** (required for default manifests: `triton-cv` / `triton-florence` request `nvidia.com/gpu`)
+- **NVIDIA GPU** (required for default manifests: `triton-cv` requests `nvidia.com/gpu`)
 - **Python 3.10+** (for local tools / scripts)
 
 ## Quickstart
@@ -111,7 +108,6 @@ cd scripts
 Images built into the Minikube Docker:
 - `triton-backend:latest`
 - `triton-cv:latest`
-- `triton-florence:latest`
 
 ### 5. Deploy to Kubernetes
 
@@ -125,8 +121,6 @@ Check pod status:
 ```bash
 kubectl get pods -n triton-inference
 ```
-
-If you only have a single GPU and want CV only, you can temporarily disable Florence by setting `replicas: 0` in `k8s/triton-florence/deployment.yaml`.
 
 ### 6. Access services
 
@@ -158,17 +152,6 @@ curl -X POST "http://localhost:8000/cv/detect" \
 
 Returns detection boxes and processing time.
 
-### Florence Object Detection
-
-```bash
-curl -X POST "http://localhost:8000/florence/detect" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@path/to/image.jpg" \
-  -F "prompt=<DETECTION>"
-```
-
-Returns Florence-2 detections and raw model output metadata.
-
 ## Models
 
 ### YOLOv8n (Computer Vision)
@@ -179,14 +162,6 @@ Returns Florence-2 detections and raw model output metadata.
 - **Backend**: TensorRT (optimized for NVIDIA GPUs)
 - **Conversion**: PyTorch → ONNX → TensorRT
 
-### Florence-2 (Vision-Language)
-
-- **Model**: Microsoft Florence-2-base
-- **Input**: Image + text prompt
-- **Output**: Object detections with labels
-- **Backend**: Python backend with vLLM engine
-- **Task**: Object detection via vision-language understanding
-
 ## Monitoring
 
 ### Prometheus Metrics
@@ -194,7 +169,6 @@ Returns Florence-2 detections and raw model output metadata.
 Prometheus automatically scrapes metrics from:
 - Backend FastAPI service (port 8000)
 - Triton CV instance (port 8002)
-- Triton Florence instance (port 8002)
 
 Key metrics:
 - `http_requests_total` - Total HTTP requests
@@ -270,14 +244,10 @@ triton-locally/
 │   ├── models/             # Model repository
 │   ├── scripts/            # Conversion scripts
 │   └── Dockerfile
-├── triton-florence/        # Triton Florence instance
-│   ├── models/             # Model repository
-│   └── Dockerfile
 ├── k8s/                    # Kubernetes manifests
 │   ├── namespace.yaml
 │   ├── backend/
 │   ├── triton-cv/
-│   ├── triton-florence/
 │   ├── prometheus/
 │   └── grafana/
 ├── monitoring/             # Monitoring configs
@@ -299,6 +269,5 @@ This project is provided as-is for demonstration purposes.
 - [Minikube Documentation](https://minikube.sigs.k8s.io/docs/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [YOLOv8 Documentation](https://docs.ultralytics.com/)
-- [Florence-2 Model](https://github.com/microsoft/Florence-2)
 - [Prometheus Documentation](https://prometheus.io/docs/)
 - [Grafana Documentation](https://grafana.com/docs/)
