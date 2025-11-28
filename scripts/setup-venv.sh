@@ -4,8 +4,8 @@ set -e
 
 echo "=== Setting up Python Virtual Environment for TensorRT Conversion ==="
 
-VENV_DIR="/home/andreykh/my_apps/triton-locally/venv"
-REQUIREMENTS_FILE="/home/andreykh/my_apps/triton-locally/triton-cv/requirements.txt"
+VENV_DIR="/home/andreykh/my_apps/triton-fullstack-minikube/venv"
+REQUIREMENTS_FILE="/home/andreykh/my_apps/triton-fullstack-minikube/triton-cv/requirements.txt"
 
 # Check if Python 3 is available
 if ! command -v python3 &> /dev/null; then
@@ -115,7 +115,7 @@ echo "To deactivate, run:"
 echo "  deactivate"
 echo ""
 echo "To convert the model, run:"
-echo "  cd ~/my_apps/triton-locally/scripts"
+echo "  cd ~/my_apps/triton-fullstack-minikube/scripts"
 echo "  source ../venv/bin/activate"
 echo "  ./convert-model.sh"
 

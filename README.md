@@ -232,7 +232,7 @@ minikube delete
 ## Project Structure
 
 ```
-triton-locally/
+triton-fullstack-minikube/
 ├── backend/                 # FastAPI backend service
 │   ├── app/
 │   │   ├── main.py         # Main application
