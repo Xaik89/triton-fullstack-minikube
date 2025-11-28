@@ -8,6 +8,9 @@ data:
     [server]
     http_port = 3000
 
+    [paths]
+    provisioning = /etc/grafana/provisioning
+
     [datasources]
     [datasources.prometheus]
     type = prometheus
@@ -17,6 +20,26 @@ data:
 
     [dashboards]
     default_home_dashboard_id = 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provisioning
+  namespace: triton-inference
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      updateIntervalSeconds: 10
+      allowUiUpdates: true
+      options:
+        path: /var/lib/grafana/dashboards
+        foldersFromFilesStructure: true
 
 ---
 apiVersion: v1
@@ -27,91 +50,112 @@ metadata:
 data:
   triton-dashboard.json: |
     {
-      "dashboard": {
-        "title": "Triton Inference Server Dashboard",
-        "tags": ["triton", "inference", "ml"],
-        "timezone": "browser",
-        "panels": [
-          {
-            "id": 1,
-            "title": "Request Rate",
-            "type": "graph",
-            "targets": [
-              {
-                "expr": "rate(http_requests_total[5m])",
-                "legendFormat": "{{method}} {{endpoint}}"
-              }
-            ],
-            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
-          },
-          {
-            "id": 2,
-            "title": "Inference Latency (p95)",
-            "type": "graph",
-            "targets": [
-              {
-                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
-                "legendFormat": "p95 latency"
-              }
-            ],
-            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
-          },
-          {
-            "id": 3,
-            "title": "Triton Model Inference Time",
-            "type": "graph",
-            "targets": [
-              {
-                "expr": "nv_inference_request_duration_us{model=\"yolo8n\"} / 1000",
-                "legendFormat": "YOLOv8n (ms)"
-              }
-            ],
-            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
-          },
-          {
-            "id": 4,
-            "title": "GPU Utilization",
-            "type": "graph",
-            "targets": [
-              {
-                "expr": "nv_gpu_utilization",
-                "legendFormat": "GPU {{gpu}}"
-              }
-            ],
-            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
-          },
-          {
-            "id": 5,
-            "title": "Error Rate",
-            "type": "graph",
-            "targets": [
-              {
-                "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
-                "legendFormat": "5xx errors"
-              },
-              {
-                "expr": "rate(http_requests_total{status=~\"4..\"}[5m])",
-                "legendFormat": "4xx errors"
-              }
-            ],
-            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
-          },
-          {
-            "id": 6,
-            "title": "Active Requests",
-            "type": "graph",
-            "targets": [
-              {
-                "expr": "nv_inference_request_count",
-                "legendFormat": "{{model}}"
-              }
-            ],
-            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
-          }
-        ],
-        "refresh": "10s",
-        "schemaVersion": 16,
-        "version": 1
-      }
+      "title": "Triton Inference Server Dashboard",
+      "tags": ["triton", "inference", "ml"],
+      "timezone": "browser",
+      "schemaVersion": 16,
+      "version": 1,
+      "refresh": "10s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Request Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(http_requests_total[5m])",
+              "legendFormat": "{{method}} {{endpoint}}",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            }
+          ],
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+        },
+        {
+          "id": 2,
+          "title": "Inference Latency (p95)",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+              "legendFormat": "p95 latency",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            }
+          ],
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+        },
+        {
+          "id": 3,
+          "title": "Triton Model Inference Time",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "nv_inference_request_duration_us{model=\"yolo8n\"} / 1000",
+              "legendFormat": "YOLOv8n (ms)",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            }
+          ],
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+        },
+        {
+          "id": 4,
+          "title": "GPU Utilization",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "nv_gpu_utilization",
+              "legendFormat": "GPU {{gpu}}",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            }
+          ],
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+        },
+        {
+          "id": 5,
+          "title": "Error Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+              "legendFormat": "5xx errors",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            },
+            {
+              "expr": "rate(http_requests_total{status=~\"4..\"}[5m])",
+              "legendFormat": "4xx errors",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            }
+          ],
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+        },
+        {
+          "id": 6,
+          "title": "Active Requests",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "nv_inference_request_count",
+              "legendFormat": "{{model}}",
+              "datasource": {"type": "prometheus", "uid": "prometheus"}
+            }
+          ],
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+        }
+      ]
     }
 
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: triton-inference
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      uid: prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true

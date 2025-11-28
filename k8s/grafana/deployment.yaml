@@ -33,6 +33,10 @@ spec:
         - name: config
           mountPath: /etc/grafana/grafana.ini
           subPath: grafana.ini
+        - name: dashboard-provisioning
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: datasource-provisioning
+          mountPath: /etc/grafana/provisioning/datasources
         - name: dashboards
           mountPath: /var/lib/grafana/dashboards
         - name: storage
@@ -48,10 +52,15 @@ spec:
       - name: config
         configMap:
           name: grafana-config
+      - name: dashboard-provisioning
+        configMap:
+          name: grafana-dashboard-provisioning
+      - name: datasource-provisioning
+        configMap:
+          name: grafana-datasources
       - name: dashboards
         configMap:
           name: grafana-dashboards
       - name: storage
         persistentVolumeClaim:
           claimName: grafana-storage
-

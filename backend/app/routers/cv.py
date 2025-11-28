@@ -4,11 +4,13 @@ import numpy as np
 import io
 from typing import List
 import os
+import logging
 
 from ..models.schemas import CVDetectionResponse, DetectionBox
 from ..clients.triton_client import TritonClient
 
 router = APIRouter(prefix="/cv", tags=["cv"])
+logger = logging.getLogger(__name__)
 
 # Initialize Triton client for CV model
 TRITON_CV_URL = os.getenv("TRITON_CV_URL", "triton-cv:8001")
@@ -63,25 +65,34 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
 
 def postprocess_yolo_output(output: np.ndarray, conf_threshold: float = 0.25) -> List[DetectionBox]:
     """
-    Postprocess YOLO output to extract bounding boxes
-    Output shape: [1, 9072, 85] for 384x384 input
-    Format: [x_center, y_center, width, height, conf, class_probs...]
+    Postprocess YOLO output to extract bounding boxes.
+    Expected output shapes:
+      - [1, N, C] (already in proposal-major order)
+      - [1, C, N] (needs transpose) e.g., exported YOLOv8: [1, 8, 3024]
+    Format per proposal: [x_center, y_center, width, height, conf, class_probs...]
     """
-    detections = []
-    
-    # Remove batch dimension
-    output = output[0]  # Shape: [9072, 85] for 384x384
-    
-    # Extract boxes with confidence > threshold
+    if output.ndim != 3:
+        raise ValueError(f"Unexpected output shape: {output.shape}")
+
+    # Ensure shape is [1, N, C]
+    if output.shape[1] < output.shape[2]:
+        output = np.transpose(output, (0, 2, 1))
+
+    # Remove batch dimension -> [N, C]
+    output = output[0]
+
+    detections: List[DetectionBox] = []
+
     for detection in output:
-        # Get box coordinates (normalized)
+        if detection.shape[0] < 6:
+            continue
+
         x_center, y_center, width, height = detection[:4]
         confidence = detection[4]
         
         if confidence < conf_threshold:
             continue
         
-        # Get class with highest probability
         class_probs = detection[5:]
         class_id = int(np.argmax(class_probs))
         class_conf = class_probs[class_id]
@@ -126,12 +137,12 @@ async def detect_objects(file: UploadFile = File(...)):
         
         # Perform inference
         results = client.infer(
-            inputs={"input": preprocessed},
-            outputs=["output"]
+            inputs={"images": preprocessed.astype(np.float32)},
+            outputs=["output0"]
         )
         
         inference_time = results.get("_inference_time_ms", 0.0)
-        output = results["output"]
+        output = results["output0"]
         
         # Postprocess results
         detections = postprocess_yolo_output(output)
@@ -142,6 +153,7 @@ async def detect_objects(file: UploadFile = File(...)):
         )
         
     except Exception as e:
+        logger.exception("Inference error")
         raise HTTPException(status_code=500, detail=f"Inference error: {str(e)}")
 
 
@@ -154,4 +166,3 @@ async def health_check():
         return {"status": "ready" if is_ready else "not ready"}
     except Exception as e:
         return {"status": "error", "error": str(e)}
-

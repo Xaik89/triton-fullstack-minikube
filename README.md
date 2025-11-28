@@ -3,7 +3,7 @@
 This project demonstrates how to set up a complete machine learning inference pipeline using NVIDIA Triton Inference Server on Minikube (local Kubernetes). The system includes:
 
 - **FastAPI Backend**: Routes requests to Triton CV instance
-- **Triton CV Instance**: Serves YOLOv8n model (TensorRT optimized)
+- **Triton CV Instance**: Serves YOLOv8n model (ONNX backend)
 - **Prometheus**: Collects metrics from all services
 - **Grafana**: Visualizes metrics and provides dashboards
 
@@ -29,7 +29,7 @@ This project demonstrates how to set up a complete machine learning inference pi
 │  (Port 8001)         │
 │                      │
 │  Model: YOLOv8n     │
-│  Backend: TensorRT   │
+│  Backend: ONNX      │
 │  Metrics: 8002      │
 └──────────┬───────────┘
            │
@@ -152,15 +152,69 @@ curl -X POST "http://localhost:8000/cv/detect" \
 
 Returns detection boxes and processing time.
 
+### Testing and Load Generation
+
+To generate inference requests for testing and to populate metrics in Grafana:
+
+```bash
+cd scripts
+./test_inference.sh
+```
+
+This script:
+- Creates a test image (384x384 pixels) if needed
+- Sends continuous inference requests every 2 seconds
+- Generates real metrics for GPU utilization, inference time, and request rates
+- Press Ctrl+C to stop
+
+**Note:** Requires Python with Pillow library. Install with:
+```bash
+pip install Pillow
+```
+
+For a single test request:
+```bash
+curl -X POST "http://localhost:8000/cv/detect" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@path/to/your/image.jpg"
+```
+
+### Running the load script (Minikube)
+
+The backend service is `ClusterIP`, so from your laptop you must port-forward first:
+
+```bash
+kubectl port-forward -n triton-inference svc/backend 8000:8000
+```
+
+In another terminal, send a finite burst (default 10 requests):
+
+```bash
+cd scripts
+./test_inference.sh --count 10
+```
+
+For continuous load:
+
+```bash
+./test_inference.sh --forever
+```
+
+If you prefer not to port-forward, point the script at the cluster DNS service URL:
+
+```bash
+./test_inference.sh --url http://backend.triton-inference.svc.cluster.local:8000/cv/detect
+```
+
 ## Models
 
 ### YOLOv8n (Computer Vision)
 
 - **Model**: YOLOv8n from Ultralytics
-- **Input**: RGB image, 640x640 pixels
-- **Output**: Bounding boxes with confidence scores
-- **Backend**: TensorRT (optimized for NVIDIA GPUs)
-- **Conversion**: PyTorch → ONNX → TensorRT
+- **Input**: RGB image, 384x384 pixels
+- **Output**: Detection results (shape: [1, 8, 3024])
+- **Backend**: ONNX Runtime (GPU-accelerated)
+- **Conversion**: PyTorch → ONNX
 
 ## Monitoring
 
@@ -181,6 +235,8 @@ Key metrics:
 
 Access the pre-configured dashboard at:
 - URL: `http://localhost:3000`
+- Username: `admin`
+- Password: `admin`
 - Dashboard: "Triton Inference Server Dashboard"
 
 The dashboard includes:
@@ -189,6 +245,13 @@ The dashboard includes:
 - GPU utilization
 - Error rates
 - Active requests
+
+**Note:** The dashboard shows real-time metrics. By default, you'll see metrics from:
+- Kubernetes health checks (liveness/readiness probes)
+- Prometheus scraping activity
+- Service monitoring
+
+To see inference-specific metrics (GPU utilization, inference time), run the test script or send actual inference requests.
 
 
 ### Model Conversion
@@ -253,9 +316,11 @@ triton-fullstack-minikube/
 ├── monitoring/             # Monitoring configs
 │   ├── prometheus/
 │   └── grafana/
-├── scripts/                # Setup scripts
+├── scripts/                # Setup and testing scripts
 │   ├── setup-minikube.sh
-│   └── build-images.sh
+│   ├── build-images.sh
+│   ├── test_inference.sh  # Load testing script
+│   └── ...
 └── README.md
 ```
 
